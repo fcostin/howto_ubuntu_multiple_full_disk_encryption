@@ -39,9 +39,9 @@ sudo apt install gparted
 
 ### install LUKS container in the second drive 
 
-In the following, replace {sdx} with the name of your secondary drive.
-In the following, replace {sdx_uuid} with the uuid of your secondary drive. discover this via `sudo blkid`. The value you want is the UUID of `/dev/{sdx}`, not `dev/mapper/{sdx}_crypt`. Also, copy the UUID, not the PARTUUID.
+In the following, replace `{sdx}` with the name of your secondary drive. For example, when I did this, `{sdx}` was `sda1`.
 
+As part of this setup you will be prompted for a passphrase. This is the *new* passphrase to use when encrypting the secondary drive. hint: consider using the same passphrase for both drives, unless you have high level of belief in your ability to remember passphrases.
 
 ```
 sudo cryptsetup -y -v luksFormat /dev/{sdx}
@@ -53,15 +53,15 @@ sudo mkfs.ext4 /dev/mapper/{sdx}_crypt
 
 There’s a way to automatically mount and decrypt your second drive on startup, when your computer prompts you for the primary hard drive decryption password.
 
-hint: consider using the same password for both drives, unless you have high level of belief in your ability to remember passwords
-
 ### create keyfile for secondary drive
 
 ```
 sudo dd if=/dev/urandom of=/root/.keyfile bs=1024 count=4
 sudo chmod 0400 /root/.keyfile
-sudo cryptsetup luksAddKey /dev/sd?X /root/.keyfile
+sudo cryptsetup luksAddKey /dev/{sdx} /root/.keyfile
 ```
+
+In the following, replace `{sdx_uuid}` with the uuid of your secondary drive. Discover this via `sudo blkid`. The value you want is the UUID of `/dev/{sdx}`, not `dev/mapper/{sdx}_crypt`. Make sure you copy the UUID, not the PARTUUID. Also, make sure you run `blkid` after you have run the above `cryptsetup` commands for the secondary disk: the reported UUID of the secondary disk is changed by running `cryptsetup`, so if you run `blkid` earlier it will report a different value, and this will not work.
 
 Then append the following lines to `/etc/crypttab` (using e.g. `sudoedit /etc/crypttab`):
 
@@ -69,13 +69,25 @@ Then append the following lines to `/etc/crypttab` (using e.g. `sudoedit /etc/cr
 {sdx}_crypt UUID={sdx_uuid} /root/.keyfile luks,discard
 ```
 
+Note: after you make a change to `/etc/crypttab`, you can run `sudo cryptdisks_start {sdx}_crypt` to test it out quickly.
+
 ### test that both primary and secondary drives are decrypted upon ubuntu login
 
 Reboot ubuntu and log in.
 
 When you choose “Other Locations” (in the file manager thing aka nautilus) the second drive should show up in the list and have a lock icon on it, but the icon should be unlocked.
 
-### move your /home folder into the secondary drive
+#### troubleshooting
+
+If your secondary encrypted drive was not automatically decrpypted, this may incidate that your `/etc/crypttab` file is misconfigured.
+
+For more information, you can review system logs using `sudo journalctl`. The system logs may include an error message of the form: "Dependency failed for Cryptography Setup for `sda1_crypt`".
+
+This may indicate that your `/etc/crypttab` is misconfigured. Re-run `sudo blkid` and double check that the UUID entry for `/dev/{sdx}` matches the line in your `/etc/crypttab`.
+
+### move your `/home folder` into the secondary drive
+
+Please ensure the above steps have all succeeded before proceeding.
 
 Migrate data
 
