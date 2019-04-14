@@ -105,6 +105,8 @@ cd /home
 ls
 ```
 
+note: if you find that you have a second `home` inside your `/home`, this indicates a mistake when `rsync`-ing across your files: the trailing `/` on the end of `/home/` is required when invoking `rsync`. To fix this, `rm -rf /mnt/tmp/home` then re-run the above `rsync` command, being careful to have EXACTLY the correct slashes in place.
+
 Make change permanent: `sudoedit /etc/fstab`, append the following line to `/etc/fstab`:
 
 ```
